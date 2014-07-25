@@ -1,0 +1,77 @@
+<!-- <!doctype html> -->
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Dis My Game</title>
+		<meta charset=utf-8 />
+		<title>Game</title>
+		<!--<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>-->
+		<link rel="stylesheet" type="text/css" href="HHH.css">
+		<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		
+		<!-- Optional theme -->
+		<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+		
+		<!-- Latest compiled and minified JavaScript -->
+		<script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+	</head>
+	<body>
+		<ul class="pages">
+			<li class="login page">
+				<div class="form">
+					<h3 class="title">What's your nickname?</h3>
+					<input class="usernameInput" type="text" maxlength="14" />
+				</div>
+			</li>
+			<li class="game">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-sm-2 sidebar">
+							<h4>Players Alive</h4>
+							<ul class="nav nav-sidebar alive">
+							</ul>
+							<h4>Players Dead</h4>
+							<ul class="nav nav-sidebar dead">
+							</ul>
+							<h4>Players in Wait</h4>
+							<ul class="nav nav-sidebar waits">
+							</ul>
+							<button type="button" class="btn btn-lg btn-success begin"id='begin'>Begin</button>
+						</div>
+						<div class="col-sm-10 main">
+							<div class="gameBoard">
+								<section>
+									<canvas id="canvasOne" height="720" width="1280">
+										Your browser does not support HTML5 canvas.
+									</canvas>
+								</section>
+							</div>
+						</div>
+					</div>
+				</div>
+			</li>
+		</ul>
+		<div class="modal fade" id="toPlay" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-body">
+						<p><strong>Are you ready to begin?</strong></p>
+						<div class="row butts">
+							<button type="button" class="btn btn-lg btn-default" data-dismiss="modal" id="regButt">Begin</button>
+							<button type="button" class="btn btn-lg btn-danger" data-dismiss="modal" id="blackButt">Not Now</button>
+						</div>
+						<div class="row miniPeople">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Latest compiled and minified jquery -->
+		<script src="//code.jquery.com/jquery-2.1.1.js"></script>
+		<script src="1.7.2jquery.min.js"></script>
+		<script src="Modernizr.js"></script>
+		<script src="HHH.js"></script>
+		<script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+	</body>
+</html>
