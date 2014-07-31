@@ -1,11 +1,13 @@
+<!-- I Blame Uday -->
 <!-- <!doctype html> -->
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
-		<title>Dis My Game</title>
+		<title>Dot Ball</title>
 		<meta charset=utf-8 />
 		<title>Game</title>
-		<!--<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>-->
+		<script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+
 		<link rel="stylesheet" type="text/css" href="HHH.css">
 		<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
 		
@@ -36,7 +38,9 @@
 							<h4>Players in Wait</h4>
 							<ul class="nav nav-sidebar waits">
 							</ul>
-							<button type="button" class="btn btn-lg btn-success begin"id='begin'>Begin</button>
+							<div class="countDownBox">
+
+							</div>
 						</div>
 						<div class="col-sm-10 main">
 							<div class="gameBoard">
@@ -51,27 +55,59 @@
 				</div>
 			</li>
 		</ul>
-		<div class="modal fade" id="toPlay" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+		<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+		
 			<div class="modal-dialog">
 				<div class="modal-content">
-					<div class="modal-body">
-						<p><strong>Are you ready to begin?</strong></p>
-						<div class="row butts">
-							<button type="button" class="btn btn-lg btn-default" data-dismiss="modal" id="regButt">Begin</button>
-							<button type="button" class="btn btn-lg btn-danger" data-dismiss="modal" id="blackButt">Not Now</button>
-						</div>
+					<div class="modal-body bodyOne">
+					<p class = "theWinner"></p>
+					</div>
+					<div class="modal-body bodyTwo">
 						<div class="row miniPeople">
+
 						</div>
+					</div>
+					<div class="modal-footer foots">
+					<p><strong>Are you ready to play Dot Ball?</strong></p>
+					
+						<div class="row butts">
+							<button type="button" class="btn btn-lg btn-danger bbb" data-dismiss="modal" id="regButt">Ready!</button>
+							<button type="button" class="btn btn-lg btn-default bbb" data-dismiss="modal" id="blackButt">Not Now</button>
+
+						</div>
+						
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="modal fade" id="myWant" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+		
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-body bodyOne">
+					<p>We need more players!!!</p>
+					</div>
+					<div class="modal-body bodyTwo">
+						<div class="row miniPeople">
+
+						</div>
+					</div>
+					<div class="modal-footer foots">
+					<p><strong>Do you want to play Dot Ball?</strong></p>
+					
+						<div class="row butts">
+							<button type="button" class="btn btn-lg btn-danger bbb" data-dismiss="modal" id="regButts">Ready!</button>
+							<button type="button" class="btn btn-lg btn-default bbb" data-dismiss="modal" id="blackButts">Not Now</button>
+
+						</div>
+						
 					</div>
 				</div>
 			</div>
 		</div>
 		<!-- Latest compiled and minified jquery -->
-		<script src="//code.jquery.com/jquery-2.1.1.js"></script>
-		<script src="1.7.2jquery.min.js"></script>
 		<script src="Modernizr.js"></script>
 		<script src="HHH.js"></script>
-		<script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
 		<script src="/socket.io/socket.io.js"></script>
 	</body>
 </html>

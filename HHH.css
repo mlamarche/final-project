@@ -33,7 +33,6 @@ ul {
 	width:100%;
 }
 .row{
-	height:100%;
 	width:100%;
 }
 /* Pages */
@@ -51,6 +50,13 @@ ul {
   width: 100%;
 }
 
+.countDownBox{
+  width:100%;
+  font-size: 150px;
+  text-align: center;
+  color:white;
+}
+
 /* Login Page */
 
 .login.page {
@@ -61,7 +67,6 @@ ul {
   height: 100px;
   margin-top: -100px;
   position: absolute;
-
   text-align: center;
   top: 50%;
   width: 100%;
@@ -97,6 +102,11 @@ ul {
 	float:right;
   background-color:black;
 }
+.theWinner{
+  font-size: 64px;
+  color:red;
+
+}
 h4{
 	background-color:rgba(0,0,0,.8);
 }
@@ -121,6 +131,10 @@ h4{
     color:white;
   }
 }
+.game-mobile{
+  height:100;
+  width:100;
+}
 
 /* Sidebar navigation */
 .nav-sidebar {
@@ -144,7 +158,6 @@ canvas{
 }
 .log{
   margin-left:20px;
-  background-color:green;
 }
 .theme-showcase{
     width:100%;

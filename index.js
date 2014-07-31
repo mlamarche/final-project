@@ -6,6 +6,9 @@ var port = process.env.PORT || 3000;
 app.get('/', function(req, res) {
     res.sendfile('Game.html');
 });
+app.get('/m', function(req, res) {
+    res.sendfile('Game-Mobile.html');
+});
 app.get('/HHH.js', function(req, res) {
     res.sendfile('HHH.js');
 });
@@ -17,6 +20,9 @@ app.get('/1.7.2jquery.min.js', function(req, res) {
 });
 app.get('/Modernizr.js', function(req, res) {
     res.sendfile('Modernizr.js');
+});
+app.get('/myStar.png', function(req, res) {
+    res.sendfile('myStar.png');
 });
 server.listen(port, function() {
     console.log('Server listening at port %d', port);
@@ -46,6 +52,11 @@ var allPlayers = [];
 
 var balls = new Array();
 var Hippos = new Array();
+var invincible = false;
+var numWants = [];
+var gameON = false;
+var beginCountDown = true;
+var countingDown = 5;
 var tempBall;
 var tempX;
 var tempY;
@@ -116,6 +127,9 @@ var addBall = function() {
     balls.push(tempBall);
 }
 
+
+
+
 // Find spots to place each ball so none start on top of each other
 
     function sortBar(all) {
@@ -124,12 +138,10 @@ var addBall = function() {
         obj["dead"] = [];
 
         for (name in all) {
-            //console.log(all[name].state);
             var state = all[name].state;
             var id = all[name].id;
             obj[state].push(all[name])
         }
-        //console.log(obj)
         //Here i need to display to bar
 
     }
@@ -143,13 +155,6 @@ var addBall = function() {
         }
         return retVal;
     }
-
-
-    //console.log(balls)
-
-    // Drawing interval
-    // setInterval(drawScreen, 33);
-
     // Functions
     // Returns true if a ball can start at given location, otherwise returns false
     function canStartHere(ball) {
@@ -175,6 +180,150 @@ var addBall = function() {
         return retVal;
     }
 
+    function updateUsernames() {
+        for (name in usernames) {
+            var usernamesID = usernames[name].id;
+            for (al = 0; al < obj["alive"].length; al++) {
+                if (obj.alive[al].id === usernamesID) {
+                    usernames[name].state = "alive";
+                };
+            }
+            for (ded = 0; ded < obj["dead"].length; ded++) {
+                if (obj.dead[ded].id === usernamesID) {
+                    usernames[name].state = "dead";
+                };
+            }
+            for (w = 0; w < obj["wait"].length; w++) {
+                if (obj.wait[w].id === usernamesID) {
+                    usernames[name].state = "wait";
+                };
+            }
+        }
+    }
+
+    function notEnoughPlayers() {
+        io.sockets.emit('notEnoughPlayers');
+    }
+
+    function newGame() {
+        gameON = true;
+        beginCountDown = false;
+        balls = [];
+        for (var i = 0; i < numBalls; i += 1) {
+            tempRadius = 5;
+            placeOK = false;
+            while (!placeOK) {
+                placeOK = generateBall();
+            }
+            balls.push(tempBall);
+        }
+        numWants = [];
+        for (pl = 0; pl < usernames.length; pl++) {
+            if (usernames[pl].wants === true) {
+                numWants.push(usernames[pl]);
+            }
+        }
+        if (numWants.length > 1) {
+            for (var i = 0; i < numWants.length; i += 1) {
+                tempRadiusHippo = 20;
+                placeOK = false;
+                while (!placeOK) {
+                    tempXHippo = tempRadiusHippo * 3 + (Math.floor(Math.random() * 1280) - tempRadiusHippo * 3);
+                    tempYHippo = tempRadiusHippo * 3 + (Math.floor(Math.random() * 720) - tempRadiusHippo * 3);
+                    tempSpeedHippo = 0;
+                    tempAngleHippo = 0;
+                    tempRadiansHippo = 0;
+                    tempVelocityXHippo = 0;
+                    tempVelocityYHippo = 0;
+                    tempHippoCounter = 0;
+
+                    var HippoPositionZeroX = 50
+                    var HippoPositionHalfX = 1280 / 2
+                    var HippoPositionFullX = 1280 - 50
+                    var HippoPositionZeroY = 50
+                    var HippoPositionHalfY = 720 / 2
+                    var HippoPositionFullY = 720 - 50
+                    var HippoPositionQuarterX = 1280 / 4;
+                    var HippoPositionThreeQX = (1280 / 2) + (1280 / 4);
+                    var HippoPositionQuarterY = 720 / 4;
+                    var HippoPositionThreeQY = (720 / 2) + (720 / 4);
+
+                    var HippoHeadX = [HippoPositionZeroX, HippoPositionZeroX, HippoPositionZeroX, HippoPositionHalfX, HippoPositionHalfX,
+                        HippoPositionFullX, HippoPositionFullX, HippoPositionFullX, HippoPositionQuarterX, HippoPositionQuarterX, HippoPositionThreeQX, HippoPositionThreeQX
+                    ]
+                    var HippoHeadY = [HippoPositionZeroY, HippoPositionHalfY, HippoPositionFullY, HippoPositionZeroY, HippoPositionFullY,
+                        HippoPositionZeroY, HippoPositionHalfY, HippoPositionFullY, HippoPositionZeroY, HippoPositionFullY, HippoPositionZeroY, HippoPositionFullY
+                    ]
+                    tempXHippo = HippoHeadX[i];
+                    tempYHippo = HippoHeadY[i];
+                    tempHippo = {
+                        x: tempXHippo,
+                        y: tempYHippo,
+                        nextX: tempXHippo,
+                        nextY: tempYHippo,
+                        radius: tempRadiusHippo,
+                        speed: tempSpeedHippo,
+                        angle: tempAngleHippo,
+                        velocityX: tempVelocityXHippo,
+                        velocityY: tempVelocityYHippo,
+                        mass: tempRadiusHippo,
+                        counter: tempHippoCounter,
+                        color: usernames[i].color,
+                        status: "alive",
+                        name: usernames[i].name,
+                        id: usernames[i].id,
+                        isUp: false,
+                        isDown: false,
+                        isRight: false,
+                        isLeft: false
+                    };
+                    placeOK = canPlaceHippoHere(tempHippo);
+                }
+                Hippos.push(tempHippo);
+            }
+        } else {
+            return false;
+        }
+        var tempWaitArray = [];
+        for (i = 0; i < obj["wait"].length; i++) {
+            var truth = false;
+            for (k = 0; k < numWants.length; k++) {
+                if (obj.wait[i].id === numWants[k].id) {
+                    truth = true;
+                }
+            }
+            if (truth) {
+                obj.alive.push(obj.wait[i]);
+            } else {
+                tempWaitArray.push(obj.wait[i]);
+            }
+        }
+        obj["wait"] = tempWaitArray;
+        return true;
+    }
+
+setInterval(function() {
+    if (!gameON && beginCountDown && numUsers > 1) {
+        if (countingDown > 0) {
+            io.sockets.emit('counting down', countingDown);
+            countingDown--;
+        } else if (countingDown === 0) {
+            var x = newGame();
+            if (x) {
+                io.sockets.emit('begin', balls, Hippos, obj);
+                updateUsernames()
+                io.sockets.emit('update bar', obj);
+            } else {
+                gameON = false;
+                beginCountDown = true;
+                countingDown = 5;
+                notEnoughPlayers();
+            }
+        } else if (numUsers <= 1) {}
+    }
+}, 1000);
+
+
 
 
 
@@ -182,48 +331,46 @@ var addBall = function() {
 
 io.on('connection', function(socket) {
     var addedUser = false;
-    console.log("new connection")
     // adds a user with id and name
-    socket.on('add user', function(username, id) {
+
+    socket.on('add user', function(username, id, color) {
         console.log(username, " has joined");
-        //console.log(id, " is their id");
-        // we store the username in the socket session for this client
         socket.username = username;
-        socket.id = id;
+        socket.myid = id;
         // add the client's username to the global list
         //usernames[username]
         var xas = {
             name: username,
             state: "wait",
-            id: id
+            id: id,
+            wants: true,
+            color: color
         };
         usernames.push(xas);
-        //console.log(usernames);
-        //console.log("^^^^^^^^^^^^^^^^^^^^^");
+
         ++numUsers;
         addedUser = true;
         io.sockets.emit('numPlayers', numUsers);
-        io.sockets.emit('frodo', usernames);
 
-        /* socket.emit('login', {
-            numUsers: numUsers
-        });
-        // echo globally (all clients) that a person has connected
-        socket.broadcast.emit('user joined', {
-            username: socket.username,
-            numUsers: numUsers
-        });*/
         allPlayers = (usernames);
         for (name in allPlayers) {
             sortBar(allPlayers);
         }
-        //console.log(obj["wait"][0])
 
+        updateUsernames();
         io.sockets.emit('update bar', obj);
     });
     //ends the game, clears everything, starts countdown clock
+    socket.on('wants', function(want, wantId) {
+        for (i = 0; i < usernames.length; i++) {
+            if (usernames[i].id === wantId) {
+                usernames[i].wants = want;
+            }
+        }
+    });
     socket.on('game over', function(winner) {
-        console.log("the game has ended with ", winner, " as our winner");
+        beginCountDown = true;
+        countingDown = 5;
         balls = [];
         Hippos = [];
         io.sockets.emit('end', winner);
@@ -237,154 +384,110 @@ io.on('connection', function(socket) {
         obj["alive"] = [];
         Hippos = [];
         balls = [];
+        updateUsernames()
         io.sockets.emit('update bar', obj);
+        gameON = false;
     });
     // updates the sidebar with names and places
     socket.on('sidebar', function() {
-        //console.log("sidebar")
+        updateUsernames()
         io.sockets.emit('update bar', obj);
-    });
-    //updates where everybody is upon load
-    socket.on('update state', function(players) {
-        //console.log("updated state")
-        //usernames = players;
     });
     // decrements number of Hippos and makes that player dead. Takes the removed hippo, emits its removal
     socket.on('remove hippo', function(hippo1) {
-        //console.log(hippo1.name, " Has Been Eliminated")
         for (o = 0; o < obj["alive"].length; o++) {
             if (hippo1.id === obj.alive[o].id) {
                 obj.dead[obj.dead.length] = obj.alive[o];
                 obj["alive"].splice(o, 1);
             }
         }
+        updateUsernames()
         io.sockets.emit('im out', hippo1.id)
         io.sockets.emit('update bar', obj);
     });
     // takes in the current position of the player
-    socket.on('my position', function(posX, posY, theirID) {
-        console.log("User with id: ", theirID, " is at position ( ", posX, ", ", posY, ")");
-        io.sockets.emit('moves', posX, posY, theirID)
+    socket.on('my position', function(posX, posY, nextX, nextY, theirID) {
+        io.sockets.emit('moves', posX, posY, nextX, nextY, theirID)
 
     });
     // removes and redraws the ball that ate the Hippo. 
     socket.on('remove ball', function(ball1) {
-        // console.log("I wish to remove a ball")
         removeBall(ball1);
         var tBall = generateBall();
         balls.push(tempBall);
         io.sockets.emit('new ball', tempBall, ball1);
     });
+    socket.on('up', function(isOn, theirID) {
+
+        io.sockets.emit('movingUp', isOn, theirID);
+    });
+    socket.on('down', function(isOn, theirID) {
+
+        io.sockets.emit('movingDown', isOn, theirID);
+    });
+    socket.on('left', function(isOn, theirID) {
+
+        io.sockets.emit('movingLeft', isOn, theirID);
+    });
+    socket.on('right', function(isOn, theirID) {
+
+        io.sockets.emit('movingRight', isOn, theirID);
+    });
+    socket.on('invincible', function() {
+        if (invincible === true) {
+            invincible = false;
+        } else {
+            invincible = true;
+        }
+        io.sockets.emit('invincibles', invincible);
+    });
+
     //Starts the game. inserts up to 8 hippos(for now all Hippos) and 
     socket.on('start', function() {
-        for (var i = 0; i < numBalls; i += 1) {
-            tempRadius = 5;
-            placeOK = false;
-            while (!placeOK) {
-                placeOK = generateBall();
-            }
-            balls.push(tempBall);
+        var x = newGame();
+        if (x) {
+            io.sockets.emit('begin', balls, Hippos, obj);
+            updateUsernames()
+            io.sockets.emit('update bar', obj);
+        } else {
+            gameON = false;
+            beginCountDown = true;
+            countingDown = 5;
         }
-        //console.log(usernames);
-        //console.log("^^^^^^^^^^^^^^^^^^^^^^^^^^^");
-        for (var i = 0; i < numUsers; i += 1) {
-            tempRadiusHippo = 20;
-            placeOK = false;
-            while (!placeOK) {
-                tempXHippo = tempRadiusHippo * 3 + (Math.floor(Math.random() * 1280) - tempRadiusHippo * 3);
-                tempYHippo = tempRadiusHippo * 3 + (Math.floor(Math.random() * 720) - tempRadiusHippo * 3);
-                tempSpeedHippo = 0;
-                tempAngleHippo = 0;
-                tempRadiansHippo = 0;
-                tempVelocityXHippo = 0;
-                tempVelocityYHippo = 0;
-                tempHippoCounter = 0;
-
-                var HippoPositionZeroX = 50
-                var HippoPositionHalfX = 1280 / 2
-                var HippoPositionFullX = 1280 - 50
-                var HippoPositionZeroY = 50
-                var HippoPositionHalfY = 720 / 2
-                var HippoPositionFullY = 720 - 50
-                /*
-                var HippoPositionQuarterX = theCanvas.width/4;
-                var HippoPositionThreeQX = (theCanvas.width/2) + (theCanvas.width/4);
-                var HippoPositionQuarterY = theCanvas.height/4;
-                var HippoPositionThreeQY = (theCanvas.height/2) + (theCanvas.height/4);
-                */
-                var HippoHeadX = [HippoPositionZeroX, HippoPositionZeroX, HippoPositionZeroX, HippoPositionHalfX, HippoPositionHalfX,
-                    HippoPositionFullX, HippoPositionFullX, HippoPositionFullX /*, HippoPositionQuarterX, HippoPositionQuarterX, HippoPositionThreeQX, HippoPositionThreeQX*/
-                ]
-                var HippoHeadY = [HippoPositionZeroY, HippoPositionHalfY, HippoPositionFullY, HippoPositionZeroY, HippoPositionFullY,
-                    HippoPositionZeroY, HippoPositionHalfY, HippoPositionFullY /*, HippoPositionZeroY, HippoPositionFullY, HippoPositionZeroY, HippoPositionFullY*/
-                ]
-                tempXHippo = HippoHeadX[i];
-                tempYHippo = HippoHeadY[i];
-                tempHippo = {
-                    x: tempXHippo,
-                    y: tempYHippo,
-                    nextX: tempXHippo,
-                    nextY: tempYHippo,
-                    radius: tempRadiusHippo,
-                    speed: tempSpeedHippo,
-                    angle: tempAngleHippo,
-                    velocityX: tempVelocityXHippo,
-                    velocityY: tempVelocityYHippo,
-                    mass: tempRadiusHippo,
-                    counter: tempHippoCounter,
-                    color: "green",
-                    status: "alive",
-                    name: usernames[i].name,
-                    id: usernames[i].id
-                };
-                placeOK = canPlaceHippoHere(tempHippo);
-            }
-            Hippos.push(tempHippo);
-        }
-        for (i = 0; i < obj["wait"].length; i++) {
-            obj.alive[i] = obj.wait[i];
-        }
-        obj["wait"] = [];
-        // console.log("Hippos: ", Hippos.length, "Balls: ", balls.length)
-        io.sockets.emit('begin', balls, Hippos, obj);
-        io.sockets.emit('update bar', obj);
     });
     //removes that player from all of the players
-    socket.on('disconnect', function() {
-        if (usernames.length > 0) {
-            console.log("A user has disconnected", socket.username);
-
-            io.sockets.emit('frodo', allPlayers);
+    socket.on('disconnect', function(reason) {
+        if (usernames.length > 0 && socket.username != undefined && numUsers > 0) {
+            console.log("A user has disconnected", socket.username, reason);
             io.sockets.emit('numPlayers', numUsers);
             var stillHere = true;
-            while (stillHere) {
+            if (stillHere) {
                 for (al = 0; al < obj["alive"].length; al++) {
-                    if (obj["alive"][al].id === socket.id) {
+                    if (obj["alive"][al].id === socket.myid) {
                         obj["alive"].splice(al, 1);
                         stillHere = false;
                         continue;
                     }
                 }
                 for (ded = 0; ded < obj["dead"].length; ded++) {
-                    if (obj["dead"][ded].id === socket.id) {
+                    if (obj["dead"][ded].id === socket.myid) {
                         obj["dead"].splice(ded, 1);
                         stillHere = false;
                         continue;
                     }
                 }
                 for (wt = 0; wt < obj["wait"].length; wt++) {
-                    if (obj["wait"][wt].id === socket.id) {
+                    if (obj["wait"][wt].id === socket.myid) {
                         obj["wait"].splice(wt, 1);
                         stillHere = false;
                         continue;
                     }
                 }
             }
-            // console.log(usernames, numUsers);
-            //console.log("^^^")
+            updateUsernames()
             var isPlayer = false;
             for (un = 0; un < usernames.length; un++) {
-                if (usernames[un].id === socket.id) {
+                if (usernames[un].id === socket.myid) {
                     usernames.splice(un, 1);
                     isPlayer = true;
                     continue;
@@ -406,3 +509,6 @@ io.on('connection', function(socket) {
         }
     });
 });
+process.on("uncaughtException", function(e) {
+    console.log("the error is ", e);
+})

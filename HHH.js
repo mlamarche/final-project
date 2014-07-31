@@ -2,20 +2,21 @@ $(document).ready(function() {
     var theCanvas = document.getElementById('canvasOne');
     var context = theCanvas.getContext("2d")
     var usernamed = "";
-    var allPlayers = {};
+    var myColor = "";
     var socket = io();
     var myID = "";
     var winner = "";
-    var Hippos = "";
-    var balls = "";
+    var Hippos = [];
+    var balls = [];
     var whatIsThis = "";
+    var timesRendered = 0;
+    var invincible = false;
+
 
     // Uses Modernizr.js to check for canvas support
     function canvasSupport(test) {
         if (test) {
             return Modernizr.canvas;
-        } else {
-            //console.log("waiting to begin again");
         }
     }
 
@@ -30,30 +31,38 @@ $(document).ready(function() {
     var numHippos = 0;
 
     intro();
+    $('#regButt').on("click", function() {
+        socket.emit('wants', true, myID);
+    });
+    $('#blackButt').on("click", function() {
+        socket.emit('wants', false, myID);
+    });
+    $('#regButts').on("click", function() {
+        socket.emit('wants', true, myID);
+    });
+    $('#blackButts').on("click", function() {
+        socket.emit('wants', false, myID);
+    });
 
     function begin(bal, Hipp, obj) {
+        $('.countDownBox').empty();
+        $('#myModal').modal('hide');
+        $('#myWant').modal('hide');
         balls = bal;
         Hippos = Hipp;
         var waitingPlayers = obj["wait"];
         for (i = 0; i < waitingPlayers.length; i++) {
             waitingPlayers[i].state = "alive";
         }
-        socket.emit('update state', allPlayers);
         canBegin = true;
         canvasApp(balls, Hippos);
     }
 
-
-    $('button.begin').click(function() {
-        socket.emit('start');
-    });
-
     function resets() {
-        //context.fillStyle = "black";
-        //context.fillRect(0, 0, 1280, 720);
         canBegin = false;
-        //$(".alive").empty();
-        //$(".dead").empty();
+        $('.theWinner').empty();
+        $('.theWinner').text(winner + " is the Winner");
+        $('#myModal').modal('show');
     }
 
     function removeHippo(outID) {
@@ -73,14 +82,22 @@ $(document).ready(function() {
         balls.push(newBall)
     }
 
+    function getCurrentPlace(anID) {
+        var hold = -1;
+        for (index = 0; index < Hippos.length; index++) {
+            if (Hippos[index].id === anID) {
+                hold = index;
+            }
+        }
+        return hold;
+    }
+
     function canvasApp(balls, Hippos) {
         //Check for canvas support
         if (!canvasSupport(canBegin)) {
             return;
         } else {
             // Grab the canvas and set the context to 2d
-            //theCanvas.width = window.innerWidth - 300;
-            //theCanvas.height = window.innerHeight;
             $(context).css("width", "100%").css("background-color", "white");
         }
 
@@ -94,54 +111,85 @@ $(document).ready(function() {
             }
             return retVal;
         }
-        $(window).keydown(function(e) {
-            var currentPlace = "";
-            for (i = 0; i < Hippos.length; i++) {
-                if (Hippos[i].id === myID) {
-                    currentPlace = i;
-                    //console.log("You are at", currentPlace)
-                }
+
+        $(window).keyup(function(e) {
+            var currentPlace = getCurrentPlace(myID);
+            if (currentPlace === -1) {
+                return;
             }
             if (Hippos.length > 1) {
-                if (e.keyCode === 37) {
-                    console.log("moving left");
-                    //console.log(Hippos[currentPlace])
-                    //if (Hippos[currentPlace].velocityX > -10) {
-                    Hippos[currentPlace].velocityX--;
-                    // }
+                if (e.keyCode === 37 || e.keyCode === 39) {
+                    //Hippos[currentPlace].velocityX = 0;
+                    if (e.keyCode === 37) {
+                        Hippos[currentPlace].isLeft = false;
+                        socket.emit('left', Hippos[currentPlace].isLeft, myID);
+                    }
+                    if (e.keyCode === 39) {
+                        Hippos[currentPlace].isRight = false;
+                        socket.emit('right', Hippos[currentPlace].isRight, myID);
+                    }
                 }
-                if (e.keyCode === 38) {
-                    console.log("moving up");
-                    //if (Hippos[currentPlace].velocityY > -10) {
-                    Hippos[currentPlace].velocityY--;
-                    //}
+                if (e.keyCode === 38 || e.keyCode === 40) {
+                    //Hippos[currentPlace].velocityY = 0;
+                    if (e.keyCode === 38) {
+                        Hippos[currentPlace].isUp = false;
+                        socket.emit('up', Hippos[currentPlace].isUp, myID);
+                    }
+                    if (e.keyCode === 40) {
+                        Hippos[currentPlace].isDown = false;
+                        socket.emit('down', Hippos[currentPlace].isDown, myID);
+                    }
                 }
-                if (e.keyCode === 39) {
-                    console.log("moving right");
-                    //if (Hippos[currentPlace].velocityX < 10) {
-                    Hippos[currentPlace].velocityX++;
-                    //}
-                }
-                if (e.keyCode === 40) {
-                    console.log("moving down");
-                    //if (Hippos[currentPlace].velocityY < 10) {
-                    Hippos[currentPlace].velocityY++;
-                    //}
-                }
-                Hippos[currentPlace].nextX = (Hippos[currentPlace].x += Hippos[currentPlace].velocityX);
-                Hippos[currentPlace].nextY = (Hippos[currentPlace].y += Hippos[currentPlace].velocityY);
-                $(window).keyup(function(e) {
-                    if (Hippos.length > 1) {
-                        if (e.keyCode === 37 || e.keyCode === 39) {
-                            Hippos[currentPlace].velocityX = 0;
-                        }
-                        if (e.keyCode === 38 || e.keyCode === 40) {
-                            Hippos[currentPlace].velocityY = 0;
+                /*if (e.keyCode === 32) {
+                    socket.emit('invincible');
+                }*/
+            }
+        })
+        $(window).keydown(function(e) {
+            var currentPlace = getCurrentPlace(myID);
+            if (currentPlace === -1) {
+                return;
+            }
+            if (canBegin === true) {
+                if (Hippos.length > 1) {
+                    if (e.keyCode === 37) {
+                        if (Hippos[currentPlace].isLeft === false) {
+                            //if (Hippos[currentPlace].velocityX > -10) {
+                            //Hippos[currentPlace].velocityX--;
+                            //}
+                            Hippos[currentPlace].isLeft = true;
+                            socket.emit('left', Hippos[currentPlace].isLeft, myID);
                         }
                     }
-                })
-                console.log(Hippos[currentPlace].x, Hippos[currentPlace].y)
-                socket.emit('my position', Hippos[currentPlace].x, Hippos[currentPlace].y, myID)
+                    if (e.keyCode === 38) {
+                        if (Hippos[currentPlace].isUp === false) {
+                            //if (Hippos[currentPlace].velocityY > -10) {
+                            Hippos[currentPlace].isUp = true;
+                            // Hippos[currentPlace].velocityY--;
+                            //}
+                            socket.emit('up', Hippos[currentPlace].isUp, myID);
+                        }
+                    }
+                    if (e.keyCode === 39) {
+                        console.log("xxxxxxxxx", Hippos, currentPlace);
+                        if (Hippos[currentPlace].isRight === false) {
+                            //if (Hippos[currentPlace].velocityX < 10) {
+                            Hippos[currentPlace].isRight = true;
+                            //Hippos[currentPlace].velocityX++;
+                            //}
+                            socket.emit('right', Hippos[currentPlace].isRight, myID);
+                        }
+                    }
+                    if (e.keyCode === 40) {
+                        if (Hippos[currentPlace].isDown === false) {
+                            Hippos[currentPlace].isDown = true;
+                            //if (Hippos[currentPlace].velocityY < 10) {
+                            //Hippos[currentPlace].velocityY++;
+                            //}
+                            socket.emit('down', Hippos[currentPlace].isDown, myID);
+                        }
+                    }
+                }
             }
         })
 
@@ -173,9 +221,6 @@ $(document).ready(function() {
             var rotatedVelocityY2 = speed2 * Math.sin(direction2 - collisionAngle);
 
             // Update actual velocities using conservation of momentum
-            /* Uses the following formulas:
-           velocity1 = ((mass1 - mass2) * velocity1 + 2*mass2 * velocity2) / (mass1 + mass2)
-           velocity2 = ((mass2 - mass1) * velocity2 + 2*mass1 * velocity1) / (mass1 + mass2)*/
             var finalVelocityX1 = ((ball1.mass - ball2.mass) * rotatedVelocityX1 + (ball2.mass + ball2.mass) * rotatedVelocityX2) / (ball1.mass + ball2.mass);
             var finalVelocityX2 = ((ball1.mass + ball1.mass) * rotatedVelocityX1 + (ball2.mass - ball1.mass) * rotatedVelocityX2) / (ball1.mass + ball2.mass);
 
@@ -201,7 +246,6 @@ $(document).ready(function() {
                 h = theCanvas.height;
 
             var scale = Math.min(w / 1280, h / 720);
-            //var scale = w * 720 / 1280;
             var nw = w * scale,
                 nh = h * scale;
             var dxx = ball1.nextX * scale - hippo1.nextX * scale;
@@ -213,23 +257,91 @@ $(document).ready(function() {
             return retVal;
         }
         var collideBallsHippo = function(ball1, hippo1) {
-            // console.log("collision");
             ball1.velocityX = 0;
             ball1.velocityY = 0;
             if (myID === hippo1.id) {
                 socket.emit('remove ball', ball1)
-                //removeBall(ball1);
                 socket.emit('remove hippo', hippo1)
-                //removeHippo(hippo1);
-                //ballCount(); server
             }
         }
+
+            function isMove(hipper) {
+                if (hipper.velocityX !== 0) {
+                    if (hipper.isLeft === false && hipper.isRight === false) {
+                        hipper.velocityX = hipper.velocityX * .90;
+                    }
+                    if (hipper.velocityX < .5 && hipper.velocityX > -.5) {
+                        hipper.velocityX = 0;
+                    }
+                }
+                if (hipper.velocityY !== 0) {
+                    if (hipper.isUp === false && hipper.isDown === false) {
+                        hipper.velocityY = hipper.velocityY * .90;
+                    }
+                    if (hipper.velocityY < .5 && hipper.velocityY > -.5) {
+                        hipper.velocityY = 0;
+                    }
+                }
+                if (hipper.isRight === true) {
+                    if (hipper.velocityX < 1 && hipper.velocityX >= 0) {
+                        hipper.velocityX = 5;
+                    }
+                    if (hipper.velocityX < 15) {
+                        hipper.velocityX++;
+                    }
+                }
+                if (hipper.isLeft === true) {
+                    if (hipper.velocityX > -1 && hipper.velocityX <= 0) {
+                        hipper.velocityX = -5;
+                    }
+                    if (hipper.velocityX > -15) {
+                        hipper.velocityX--;
+                    }
+                }
+                if (hipper.isUp === true) {
+                    if (hipper.velocityY > -1 && hipper.velocityY <= 0) {
+                        hipper.velocityY = -5;
+                    }
+                    if (hipper.velocityY > -15) {
+                        hipper.velocityY--;
+                    }
+
+                }
+                if (hipper.isDown === true) {
+                    //console.log(Hippos)
+                    if (hipper.velocityY < 1 && hipper.velocityY >= 0) {
+                        hipper.velocityY = 5;
+                    }
+                    if (hipper.velocityY < 15) {
+                        hipper.velocityY++;
+                    }
+                }
+
+            }
+
+            function positionFunction() {
+                var temp = -1;
+                temp = getCurrentPlace(myID);
+                //console.log(Hippos[temp], temp, Hippos.length)
+                if (temp != -1) {
+                    if (Hippos.length > 0) {
+                        if ((Hippos[temp].isRight === true || Hippos[temp].isLeft === true || Hippos[temp].isUp === true || Hippos[temp].isDown === true) || (Hippos[temp].velocityX != 0 || Hippos[temp].velocityY != 0)) {
+                            Hippos[temp].nextX = (Hippos[temp].x += Hippos[temp].velocityX);
+                            Hippos[temp].nextY = (Hippos[temp].y += Hippos[temp].velocityY);
+                            socket.emit('my position', Hippos[temp].nextX, Hippos[temp].nextY, myID)
+                        }
+                    }
+                }
+            }
 
             function update() {
                 for (var i = 0; i < balls.length; i += 1) {
                     ball = balls[i];
                     ball.nextX = (ball.x += ball.velocityX);
                     ball.nextY = (ball.y += ball.velocityY);
+                }
+                for (j = 0; j < Hippos.length; j++) {
+                    isMove(Hippos[j])
                 }
 
                 var w = window.innerWidth - 300,
@@ -239,10 +351,6 @@ $(document).ready(function() {
 
 
                 $(theCanvas).css("width", Math.floor(1280 * scale) + "px").css("height", Math.floor(720 * scale) + "px");
-
-
-                //theCanvas.width = window.innerWidth - 300;
-                //theCanvas.height = window.innerHeight;
             }
 
             function testWalls() {
@@ -261,35 +369,54 @@ $(document).ready(function() {
                     ball = balls[i];
 
                     if (ball.nextX * scale + ball.radius > 1280) { // right wall
-                        ball.velocityX = ball.velocityX * (-1);
+                        if (ball.velocityX < 40 && ball.velocityX > -40) {
+                            ball.velocityX = ball.velocityX * (-1.1);
+                        } else {
+                            ball.velocityX = ball.velocityX * (-1);
+                        }
                         ball.nextX = 1280 - ball.radius;
 
-                    } else if (ball.nextX - ball.radius < 0) { // top wall
-                        ball.velocityX = ball.velocityX * (-1);
+                    } else if (ball.nextX - ball.radius < 0) { // left wall
+                        if (ball.velocityX < 40 && ball.velocityX > -40) {
+                            ball.velocityX = ball.velocityX * (-1.1);
+                        } else {
+                            ball.velocityX = ball.velocityX * (-1);
+                        }
                         ball.nextX = ball.radius;
 
                     } else if (ball.nextY + ball.radius > 720) { // bottom wall
-                        ball.velocityY = ball.velocityY * (-1);
+                        if (ball.velocityY < 40 && ball.velocityY > -40) {
+                            ball.velocityY = ball.velocityY * (-1.1);
+                        } else {
+                            ball.velocityY = ball.velocityY * (-1);
+                        }
                         ball.nextY = 720 - ball.radius;
 
-                    } else if (ball.nextY - ball.radius < 0) { // left wall
-                        ball.velocityY = ball.velocityY * (-1);
+                    } else if (ball.nextY - ball.radius < 0) { // top wall
+                        if (ball.velocityY < 40 && ball.velocityY > -40) {
+                            ball.velocityY = ball.velocityY * (-1.1);
+                        } else {
+                            ball.velocityY = ball.velocityY * (-1);
+                        }
                         ball.nextY = ball.radius;
                     }
 
                 }
                 for (var i = 0; i < Hippos.length; i += 1) {
                     datHippo = Hippos[i];
-                    if (datHippo.nextX * scale + datHippo.radius > 1280) { // right wall
+                    if (datHippo.nextX + datHippo.radius > 1280) { // right wall
                         datHippo.velocityX = datHippo.velocityX * (-1);
                         datHippo.nextX = 1280 - datHippo.radius;
-                    } else if (datHippo.nextX - datHippo.radius < 0) { // top wall
+
+                    } else if (datHippo.nextX - datHippo.radius < 0) { // left wall
                         datHippo.velocityX = datHippo.velocityX * (-1);
                         datHippo.nextX = datHippo.radius;
+
                     } else if (datHippo.nextY + datHippo.radius > 720) { // bottom wall
                         datHippo.velocityY = datHippo.velocityY * (-1);
                         datHippo.nextY = 720 - datHippo.radius;
-                    } else if (datHippo.nextY - datHippo.radius < 0) { // left wall
+
+                    } else if (datHippo.nextY - datHippo.radius < 0) { // top wall
                         datHippo.velocityY = datHippo.velocityY * (-1);
                         datHippo.nextY = datHippo.radius;
                     }
@@ -308,6 +435,16 @@ $(document).ready(function() {
                         }
                     }
                 }
+                for (var i = 0; i < Hippos.length; i += 1) {
+                    ball = Hippos[i];
+                    for (var j = i + 1; j < Hippos.length; j += 1) {
+                        testBall = Hippos[j];
+                        if (hitTestCircle(ball, testBall)) {
+                            //console.log("Hippos Hit!!!");
+                            collideBalls(ball, testBall);
+                        }
+                    }
+                }
             }
         var collideHippo = function() {
             var ball;
@@ -317,7 +454,6 @@ $(document).ready(function() {
                 for (var j = 0; j < Hippos.length; j += 1) {
                     hippo = Hippos[j];
                     if (hitHippoBall(ball, hippo)) {
-                        // console.log("Collision")
                         collideBallsHippo(ball, hippo);
                     }
                 }
@@ -357,24 +493,37 @@ $(document).ready(function() {
             var nw = w * scale,
                 nh = h * scale;
             for (var i = 0; i < Hippos.length; i += 1) {
-                if (Hippos[i].id === myID) {
-                    context.fillStyle = "#00FF00";
-                } else {
-                    context.fillStyle = "#0000FF";
-                }
                 Hippo = Hippos[i];
+                var image = new Image(Hippo.radius, Hippo.radius);
+                image.src = 'myStar.png';
+                //image.style = "width: " + Hippo.radius + "px";
+
+                /*if (Hippo.id === myID) {
+                    context.arc(Hippo.x, Hippo.y, Hippo.radius + 10, 0, 2 * Math.PI)
+                }*/
+                context.fillStyle = Hippo.color;
+                //console.log(Hippo.color)
                 Hippo.x = Hippo.nextX;
                 Hippo.y = Hippo.nextY;
 
                 context.beginPath();
                 context.arc(Hippo.x * scale, Hippo.y * scale, 20, 0, Math.PI * 2, true);
+                //context.globalCompositeOperation = 'source-in';
+
+                //context.globalCompositeOperation = 'source-over';
                 context.closePath();
+
                 context.fill();
+                if (Hippo.id === myID) {
+                    context.drawImage(image, Hippo.x - Hippo.radius, Hippo.y - Hippo.radius, 2 * Hippo.radius, 2 * Hippo.radius)
+                }
             }
         }
 
+
+
             function drawScreen() {
-                //console.log("Drawing");
+                //console.log("rendering")
                 // Reset canvas
                 context.fillStyle = "#FFFFFF";
                 context.fillRect(0, 0, 1280, 720);
@@ -382,34 +531,39 @@ $(document).ready(function() {
                 // Outside border
                 context.strokeStyle = "#FF0000";
                 context.strokeRect(1, 1, 1280 - 2, 720 - 2);
-                /*for (name in allPlayers) {
-                    console.log(allPlayers[name].state);
-                }*/
-                //console.log("rendering");
                 if (Hippos.length === 1) {
-                    console.log("The game is over")
                     if (Hippos[0].id === myID) {
                         socket.emit('game over', Hippos[0].name);
-                        console.log("CONGRATULATIONS CHAMPION. YOU ARE OUR WINNER")
+                        //gameOver(Hippos[0].name);
+                        canBegin = false;
                     }
                     Hippos = [];
                     balls = [];
                     clearInterval(whatIsThis);
                     numHippos = 0;
+                    winner = "";
                 }
                 if (canBegin === true) {
-                    //console.log("Hippos: ", Hippos, "Balls: ", balls.length);
+                    timesRendered++;
+                    if (timesRendered % 100 === 0) {
+                        var meh = getCurrentPlace(myID);
+                        if (meh === 0) {
+                            socket.emit('record', Hippos, balls);
+                        }
+                    }
                     update();
                     testWalls();
                     collide();
-                    collideHippo();
+                    if (invincible === false) {
+                        collideHippo();
+                    }
                     renderBall();
                     renderHippo();
+                    positionFunction();
                 } else {
                     return;
                 }
             }
-
         whatIsThis = setInterval(drawScreen, 33);
     }
 
@@ -441,12 +595,14 @@ $(document).ready(function() {
             if (usernamed) {
                 $loginPage.fadeOut();
                 $game.show();
-                // canvasApp(); //Here I call The game page
                 $loginPage.off('click');
-
+                var rand = Math.random() * (COLORS.length - 1);
+                rand = Math.floor(rand);
+                myColor = COLORS[rand];
                 // Tell the server your username
                 myID = createGuid();
-                socket.emit('add user', usernamed, myID);
+                console.log(rand)
+                socket.emit('add user', usernamed, myID, myColor);
             }
         }
 
@@ -460,11 +616,9 @@ $(document).ready(function() {
             // When the client hits ENTER on their keyboard
             if (event.which === 13) {
                 if (usernamed) {
-                    sendMessage();
                     typing = false;
                 } else {
                     setUsername();
-
                 }
             }
         });
@@ -478,92 +632,123 @@ $(document).ready(function() {
 
         // Socket events
         socket.on('numPlayers', function(numPlays) {
-            //console.log("inside numPlayers")
+            //console.log("num lpayers")
             numHippos = numPlays;
         });
         socket.on('frodo', function(usernames) {
-            //console.log("i went into frodo");
-            allPlayers = (usernames);
+            //console.log("frodo")
+            //allPlayers = (usernames);
         });
         socket.on('begin', function(balls, Hippos, obj) {
-            //console.log("Got balls", balls);
+            //console.log("begin")
             begin(balls, Hippos, obj);
         });
-        socket.on('end', function(winner) {
-            //console.log(winner, " is the champion");
+        socket.on('end', function(winners) {
+            winner = winners
+            //console.log("end")
             resets();
         });
-        socket.on('moves', function(posX, posY, theirID) {
-            var place = -1;
-            for (z = 0; z < Hippos.length; z++) {
-                if (Hippos[z].id === theirID) {
-                    console.log(Hippos[z].name, " is moving to ( ", posX, ", ", posY, ")");
-                    if (Hippos[z].id !== myID) {
-                        place = z;
-                    }
-                }
+        socket.on('moves', function(nextX, nextY, theirID) {
+            //console.log("moving")
+            var place = getCurrentPlace(theirID);
+            if (place != -1) {
+                Hippos[place].nextX = nextX;
+                Hippos[place].nextY = nextY;
             }
-            if (place === -1) {
-                return;
+            if (theirID === myID) {
+                //console.log("you do not exist", place);
+            } else {
+                //console.log(theirID, "does not exist", place)
             }
-            Hippos[place].velocityX = posX - Hippos[place].x;
-            Hippos[place].velocityY = posY - Hippos[place].y;
-            Hippos[place].nextX = Hippos[place].x += Hippos[place].velocityX;
-            Hippos[place].nextY = Hippos[place].y += Hippos[place].velocityY;
-            // Hippos[place].nextX = posX;
-            // Hippos[place].nextX = posY;
         })
         socket.on('im out', function(outID) {
+            //console.log("im out")
             removeHippo(outID);
         });
+        socket.on('movingUp', function(isOn, theirID) {
+            //console.log("up")
+            var place = -1;
+            if (theirID != myID) {
+                place = getCurrentPlace(theirID)
+            } else {
+                return;
+            }
+            Hippos[place].isUp = isOn;
+        });
+        socket.on('movingDown', function(isOn, theirID) {
+            //console.log("down")
+            var place = -1;
+            if (theirID != myID) {
+                place = getCurrentPlace(theirID)
+            } else {
+                return;
+            }
+            Hippos[place].isDown = isOn;
+        });
+        socket.on('movingLeft', function(isOn, theirID) {
+            //console.log("left")
+            var place = -1;
+            if (theirID != myID) {
+                place = getCurrentPlace(theirID)
+            } else {
+                return;
+            }
+            Hippos[place].isLeft = isOn;
+        });
+        socket.on('movingRight', function(isOn, theirID) {
+            //console.log("right")
+            var place = -1;
+            if (theirID != myID) {
+                place = getCurrentPlace(theirID)
+            } else {
+                return;
+            }
+            Hippos[place].isRight = isOn;
+        });
         socket.on('new ball', function(newBall, ball1) {
-            //console.log("A new ball has been generated")
+            //console.log("new balls")
             removeBall(newBall, ball1);
         });
+        socket.on('invincibles', function(inv) {
+            //console.log("invincibles")
+            invincible = inv;
+        });
+        socket.on('counting down', function(bigCount) {
+            console.log("Starting game in ", bigCount)
+            $('.countDownBox').empty();
+            $('.countDownBox').text(bigCount);
+        });
+        socket.on('notEnoughPlayers', function() {
+            $('#myModal').modal('hide');
+            $('#myWant').modal('show');
+        });
         socket.on('update bar', function(objs) {
-            //console.log("Inside update bar")
-            //console.log(objs)
             $('.alive').empty();
             $('.dead').empty();
             $('.waits').empty();
             var count = 0;
+            console.log(objs)
             for (key in objs) {
                 count++;
-                //console.log(objs[key].length);
                 if (objs[key].length > 0) {
                     if (key === "alive") {
                         for (i = 0; i < objs[key].length; i++) {
-                            var $os = $('<li>').addClass('log').text(objs[key][i].name)
+                            var $os = $('<li>').addClass('log').text(objs[key][i].name).css("background-color", objs[key][i].color);
                             $('.alive').append($os);
                         }
                     } else if (key === "dead") {
                         for (i = 0; i < objs[key].length; i++) {
-                            var $os = $('<li>').addClass('log').text(objs[key][i].name)
+                            var $os = $('<li>').addClass('log').text(objs[key][i].name).css("background-color", objs[key][i].color);
                             $('.dead').append($os);
                         }
                     } else if (key === "wait") {
                         for (i = 0; i < objs[key].length; i++) {
-                            var $os = $('<li>').addClass('log').text(objs[key][i].name)
+                            var $os = $('<li>').addClass('log').text(objs[key][i].name).css("background-color", objs[key][i].color);
                             $('.waits').append($os);
                         }
                     }
                 }
             }
         });
-
-        // Whenever the server emits 'login', log the login message
-        /*     socket.on('login', function(data) {
-            connected = true;
-        });
-
-        // Whenever the server emits 'user joined', log it in the chat body
-        socket.on('user joined', function(data) {
-
-        });
-
-        // Whenever the server emits 'user left', log it in the chat body
-        socket.on('user left', function(data) {
-
-        });*/
     }
 });
